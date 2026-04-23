@@ -12,9 +12,7 @@ function! s:popup__close() dict abort
         return
     endif
 
-    if self.type ==# 'popup'
-        call popup_close(self.win_id)
-    else
+    if self.type !=# 'popup'
         let winnr = self.get_winnr()
         if winnr > 0
             " Without this 'noautocmd', the BufWipeout event will be triggered and
@@ -183,7 +181,7 @@ function! s:popup__vimpopup_win_filter(win_id, key) dict abort
     " cannot enter the popup window, so we override the handling here for now
     let keymaps = self.vimpopup_keymaps()
     if a:key ==# 'q'
-        call self.close()
+        call popup_close(a:win_id)
     elseif a:key ==# '?'
         call self.echo_help()
     elseif has_key(self.opts, 'mappings') && has_key(self.opts.mappings, a:key)
@@ -266,7 +264,7 @@ endfunction
 let s:popup.vimpopup_win_opts = funcref('s:popup__vimpopup_win_opts')
 
 function! s:popup__vimpopup_win_callback(win_id, result) dict abort
-    " Hacky custom cleanup for vimpopup, necessary as buffer never entered
+    silent! call b:__gitmessenger_popup.close()
     silent! unlet b:__gitmessenger_popup
     silent! autocmd! plugin-git-messenger-close * <buffer>
     silent! autocmd! plugin-git-messenger-buf-enter
@@ -300,7 +298,8 @@ function! s:popup__open() dict abort
         " See gitmessenger#popup#close_current_popup() and gitmessenger#new()
         let b:__gitmessenger_popup = self " local to opener, removed by callback
         " Also ensure popup closed and callback called when leaving opener
-        autocmd BufWipeout,BufLeave <buffer> ++once silent! call b:__gitmessenger_popup.close()
+        autocmd BufWipeout,BufLeave <buffer> ++once silent!
+          \ call popup_close(b:__gitmessenger_popup.win_id)
         let self.bufnr = winbufnr(win_id)
         let self.win_id = win_id
         return
